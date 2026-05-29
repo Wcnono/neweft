@@ -9,11 +9,51 @@ const EFT_POINTS = [
 ];
 
 const EMOTIONS = {
-  anxiety: { label: "焦虑", agitation: 1.18, density: 1.2, drift: 1 },
-  stress: { label: "压力", agitation: 1.05, density: 1.08, drift: 0.82 },
-  fatigue: { label: "疲惫", agitation: 0.62, density: 0.72, drift: 0.52 },
-  sadness: { label: "悲伤", agitation: 0.82, density: 0.9, drift: 0.7 },
-  numbness: { label: "麻木", agitation: 0.42, density: 0.56, drift: 0.36 },
+  anxiety: {
+    label: "焦虑",
+    start: "#6F2432",
+    deep: "#16080E",
+    accent: "#FF8A7A",
+    agitation: 1.18,
+    density: 1.2,
+    drift: 1,
+  },
+  stress: {
+    label: "压力",
+    start: "#1F4A3D",
+    deep: "#071410",
+    accent: "#8AD7BB",
+    agitation: 1.05,
+    density: 1.08,
+    drift: 0.82,
+  },
+  fatigue: {
+    label: "疲惫",
+    start: "#244A72",
+    deep: "#071021",
+    accent: "#8BC7FF",
+    agitation: 0.62,
+    density: 0.72,
+    drift: 0.52,
+  },
+  sadness: {
+    label: "悲伤",
+    start: "#4A2F72",
+    deep: "#100821",
+    accent: "#C9A7FF",
+    agitation: 0.82,
+    density: 0.9,
+    drift: 0.7,
+  },
+  numbness: {
+    label: "麻木",
+    start: "#7A641E",
+    deep: "#161207",
+    accent: "#FFE08A",
+    agitation: 0.42,
+    density: 0.56,
+    drift: 0.36,
+  },
 };
 
 const REQUIRED_TAPS = 7;
@@ -80,6 +120,7 @@ function draw() {
 
   if (appState === "session") {
     updateEftTargets();
+    drawBodyEnergyMap(palette);
     detectTapGesture();
     drawEftTargets(palette);
     drawHandFeedback(palette);
@@ -433,24 +474,29 @@ function registerTap() {
 }
 
 function makePalette(progress) {
-  // 情绪色彩路径：深紫焦虑 -> 蓝绿色缓和 -> 浅绿/暖白释放。
-  const start = color("#3B2F63");
+  // 每种情绪拥有自己的起始色，EFT 推进后都收束到同一个平静色。
+  const profile = EMOTIONS[selectedEmotion];
+  const start = color(profile.start);
   const middle = color("#5B7C88");
   const end = color("#DDF3EA");
   const warm = color("#FFF8EE");
-  const night = color("#120C28");
+  const night = color(profile.deep);
   const deepTeal = color("#243F44");
+  const startAccent = color(profile.accent);
+  const calmAccent = color("#95D5D0");
 
   const firstLeg = easeInOut(constrain(progress / 0.58, 0, 1));
   const secondLeg = easeInOut(constrain((progress - 0.58) / 0.42, 0, 1));
   const base = progress < 0.58 ? lerpColor(start, middle, firstLeg) : lerpColor(middle, end, secondLeg);
-  const deep = lerpColor(night, deepTeal, progress * 0.72);
-  const glow = lerpColor(color("#9A79D6"), warm, easeInOut(progress));
+  const deep = progress < 0.58 ? lerpColor(night, deepTeal, firstLeg) : lerpColor(deepTeal, color("#EAF7F2"), secondLeg);
+  const glow = progress < 0.5
+    ? lerpColor(startAccent, calmAccent, easeInOut(progress * 2))
+    : lerpColor(calmAccent, warm, easeInOut((progress - 0.5) * 2));
   const accent = progress < 0.5
-    ? lerpColor(color("#E5D7FF"), color("#95D5D0"), progress * 2)
-    : lerpColor(color("#95D5D0"), warm, (progress - 0.5) * 2);
+    ? lerpColor(startAccent, calmAccent, progress * 2)
+    : lerpColor(calmAccent, warm, (progress - 0.5) * 2);
 
-  return { base, deep, glow, accent, end, warm };
+  return { base, deep, glow, accent, end, warm, start };
 }
 
 function drawGradientBackground(palette) {
@@ -614,6 +660,76 @@ function drawOrganicRing(cx, cy, radius, roughness, strokeColor, alpha) {
     curveVertex(cx + cos(angle) * r, cy + sin(angle) * r);
   }
   endShape(CLOSE);
+}
+
+function drawBodyEnergyMap(palette) {
+  const points = EFT_POINTS
+    .map((point) => trackedPoints.get(point.id))
+    .filter(Boolean);
+  if (points.length < 2) return;
+
+  const breath = getBreath();
+  const energy = getEmotionEnergy();
+  const instability = pow(1 - visualProgress, 1.45) * energy;
+  const centerX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+  const current = EFT_POINTS[currentPointIndex];
+  const active = current && trackedPoints.get(current.id);
+  const collarbone = trackedPoints.get("collarbone") || points[points.length - 1];
+  const crown = trackedPoints.get("crown") || points[0];
+
+  push();
+  blendMode(SCREEN);
+  drawingContext.shadowColor = rgba(palette.accent, 0.28);
+  drawingContext.shadowBlur = 14 + breath * 16 + tapFlash * 18;
+
+  noFill();
+  for (let layer = 0; layer < 3; layer += 1) {
+    stroke(red(palette.accent), green(palette.accent), blue(palette.accent), 38 - layer * 10);
+    strokeWeight(1.2 - layer * 0.18);
+    beginShape();
+    points.forEach((point, index) => {
+      const drift = getEnergyDrift(point, instability * (8 - layer * 2), index + layer * 11);
+      curveVertex(point.x + drift.x, point.y + drift.y);
+    });
+    endShape();
+  }
+
+  points.forEach((point, index) => {
+    const phase = frameCount * 0.018 + index * 0.72;
+    const radius = 7 + sin(phase) * 1.7 + visualProgress * 2;
+    noFill();
+    stroke(red(palette.glow), green(palette.glow), blue(palette.glow), 28);
+    strokeWeight(1);
+    ellipse(point.x, point.y, radius * 3.8, radius * 3.8);
+    noStroke();
+    fill(red(palette.warm), green(palette.warm), blue(palette.warm), 36);
+    ellipse(point.x, point.y, radius, radius);
+  });
+
+  const fieldHeight = max(120, collarbone.y - crown.y + getTapRadius() * 2.4);
+  const fieldWidth = min(width, height) * (0.38 + breath * 0.03);
+  stroke(red(palette.accent), green(palette.accent), blue(palette.accent), poseLandmarks ? 18 : 30);
+  strokeWeight(1);
+  ellipse(centerX, (crown.y + collarbone.y) * 0.5, fieldWidth, fieldHeight);
+
+  if (active) {
+    stroke(red(palette.glow), green(palette.glow), blue(palette.glow), 40 + tapFlash * 90);
+    strokeWeight(1 + tapFlash);
+    line(centerX, collarbone.y, active.x, active.y);
+  }
+
+  pop();
+}
+
+function getEnergyDrift(point, amount, seed) {
+  return {
+    x:
+      (noise(point.x * 0.006 + seed, point.y * 0.006, frameCount * 0.011) - 0.5) *
+      amount,
+    y:
+      (noise(point.x * 0.006, point.y * 0.006 + seed, frameCount * 0.011) - 0.5) *
+      amount,
+  };
 }
 
 function drawCompletionLight(palette) {
@@ -798,18 +914,29 @@ function drawHandFeedback(palette) {
 function drawAlignmentGuide(palette) {
   if (!cameraReady) return;
   const fallback = getFallbackTargets();
-  const eyeY = fallback.underEye.y;
-  const faceCenterY = (fallback.crown.y + fallback.chin.y) * 0.52;
-  const faceHeight = fallback.chin.y - fallback.crown.y + getTapRadius() * 1.8;
-  const faceWidth = min(width, height) * 0.34;
+  const points = EFT_POINTS.map((point) => fallback[point.id]).filter(Boolean);
+  const centerX = width * 0.5;
 
   push();
   blendMode(SCREEN);
   noFill();
-  stroke(red(palette.accent), green(palette.accent), blue(palette.accent), 24);
+  stroke(red(palette.accent), green(palette.accent), blue(palette.accent), 22);
   strokeWeight(1);
-  ellipse(width * 0.5, faceCenterY, faceWidth, faceHeight);
-  arc(width * 0.5, eyeY, faceWidth * 1.4, faceWidth * 0.7, PI * 0.08, PI * 0.92);
+  beginShape();
+  points.forEach((point, index) => {
+    const offset = sin(frameCount * 0.012 + index * 0.8) * getTapRadius() * 0.08;
+    curveVertex(point.x + offset, point.y);
+  });
+  endShape();
+
+  points.forEach((point, index) => {
+    const pulse = getBreath() * 4 + sin(frameCount * 0.018 + index) * 1.5;
+    stroke(red(palette.glow), green(palette.glow), blue(palette.glow), 20);
+    ellipse(point.x, point.y, getTapRadius() * 0.55 + pulse, getTapRadius() * 0.55 + pulse);
+  });
+
+  stroke(red(palette.warm), green(palette.warm), blue(palette.warm), 18);
+  line(centerX, fallback.crown.y - getTapRadius() * 0.8, centerX, fallback.collarbone.y + getTapRadius() * 0.9);
   pop();
 }
 

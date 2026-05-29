@@ -112,8 +112,44 @@ h1 {
 }
 
 .emotion-choice {
+  --emotion-color: rgba(255, 255, 255, 0.72);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 8px;
   color: rgba(255, 255, 255, 0.66);
+}
+
+.emotion-choice::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emotion-color);
+  box-shadow: 0 0 12px var(--emotion-color);
+  content: "";
+  opacity: 0.72;
+}
+
+.emotion-choice[data-emotion="anxiety"] {
+  --emotion-color: #ff8a7a;
+}
+
+.emotion-choice[data-emotion="stress"] {
+  --emotion-color: #8ad7bb;
+}
+
+.emotion-choice[data-emotion="fatigue"] {
+  --emotion-color: #8bc7ff;
+}
+
+.emotion-choice[data-emotion="sadness"] {
+  --emotion-color: #c9a7ff;
+}
+
+.emotion-choice[data-emotion="numbness"] {
+  --emotion-color: #ffe08a;
 }
 
 .emotion-choice:hover,

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EFT 情绪释放空间</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="p5-holder" aria-hidden="true"></div>
+
+    <main id="ui-root">
+      <section id="entry-panel" class="screen" aria-label="情绪进入页">
+        <div class="entry-inner">
+          <h1>EFT 情绪释放空间</h1>
+
+          <div class="emotion-row" role="radiogroup" aria-label="情绪选择">
+            <button class="emotion-choice is-active" type="button" data-emotion="anxiety" aria-pressed="true">焦虑</button>
+            <button class="emotion-choice" type="button" data-emotion="stress" aria-pressed="false">压力</button>
+            <button class="emotion-choice" type="button" data-emotion="fatigue" aria-pressed="false">疲惫</button>
+            <button class="emotion-choice" type="button" data-emotion="sadness" aria-pressed="false">悲伤</button>
+            <button class="emotion-choice" type="button" data-emotion="numbness" aria-pressed="false">麻木</button>
+          </div>
+
+          <label class="intensity-label" for="intensity-slider">
+            <span>情绪强度</span>
+            <output id="intensity-value" for="intensity-slider">8</output>
+          </label>
+          <input id="intensity-slider" class="intensity-slider" type="range" min="1" max="10" step="1" value="8" />
+
+          <button id="start-button" class="primary-button" type="button">开始释放</button>
+        </div>
+      </section>
+
+      <section id="session-panel" class="screen is-hidden" aria-label="EFT 交互页">
+        <div class="session-bar">
+          <div class="session-point">
+            <span id="session-emotion">焦虑</span>
+            <strong id="point-label">头顶</strong>
+          </div>
+          <div id="tap-dots" class="tap-dots" aria-hidden="true"></div>
+          <span id="progress-label" class="progress-label">0%</span>
+        </div>
+        <div id="camera-status" class="camera-status">等待摄像头</div>
+        <button id="camera-retry" class="camera-retry is-hidden" type="button">重新开启摄像头</button>
+      </section>
+
+      <section id="complete-panel" class="screen is-hidden" aria-label="结束反馈页">
+        <div class="complete-inner">
+          <p class="complete-kicker">情绪强度</p>
+          <h2>
+            <span id="before-intensity">8</span>
+            <span class="arrow">→</span>
+            <span id="after-intensity">4</span>
+          </h2>
+          <p class="complete-message">你的身体正在恢复平衡</p>
+          <button id="restart-button" class="ghost-button" type="button">再次进入</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="./sketch.js"></script>
+    <script src="./p5-fallback.js"></script>
+  </body>
+</html>
